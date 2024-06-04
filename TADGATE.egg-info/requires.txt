@@ -1,0 +1,13 @@
+scanpy==1.8.2
+scikit-learn==1.0.2
+scikit-image==0.18.3
+scipy==1.7.3
+pandas==1.4.1
+torch==1.13.1
+torch-geometric==2.3.1
+tqdm==4.63.0
+rpy2==3.1.0
+umap-learn==0.5.2
+matplotlib==3.5.1
+seaborn==0.12.2
+h5py==3.6.0

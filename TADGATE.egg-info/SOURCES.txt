@@ -1,0 +1,15 @@
+LICENSE
+README.md
+setup.py
+TADGATE/Call_TADs.py
+TADGATE/Plot_Function.py
+TADGATE/TADGATE_main.py
+TADGATE/TADGATE_pyG.py
+TADGATE/TADGATE_utils.py
+TADGATE/__init__.py
+TADGATE/gat_conv.py
+TADGATE.egg-info/PKG-INFO
+TADGATE.egg-info/SOURCES.txt
+TADGATE.egg-info/dependency_links.txt
+TADGATE.egg-info/requires.txt
+TADGATE.egg-info/top_level.txt
