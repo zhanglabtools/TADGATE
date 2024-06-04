@@ -65,36 +65,23 @@ conda create -n TADGATE python=3.8
 conda activate TADGATE
 ```
 
-
-
-Install required packages:
-
-```shell
-pip install -r requirement.txt
-```
-
-If you can't install all the dependency packages at once, please try installing the Python packages listed in requirements.txt one by one. 
-
-For pytorch-related packages, please see https://pytorch.org/ and torch-geometric library is also required, please see the installation steps in https://github.com/pyg-team/pytorch_geometric#installation
-
-The use of the mclust algorithm requires the rpy2 package (Python) and the mclust package (R). See https://pypi.org/project/rpy2/ and https://cran.r-project.org/web/packages/mclust/index.html for detail.
-
-
-
 Install TADGATE with two methods:
 
-Method1: Install from source code:
+1. Install TADGATE by PyPI
 
 ~~~
-python setup.py build
-python setup.py install
+pip install TADGATE
 ~~~
 
-Method2: Install TADGATE by PyPI
+2. Or install from source code
 
 ```shell
-pip install TADGATE
+pip install .
 ```
+
+
+
+The use of the mclust algorithm  requires the rpy2 package (Python) and the mclust package (R). See https://pypi.org/project/rpy2/ and https://cran.r-project.org/web/packages/mclust/index.html for detail.  (optional)
 
 
 

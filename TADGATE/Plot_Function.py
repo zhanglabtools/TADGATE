@@ -86,7 +86,8 @@ def draw_graph_used_in_TADGATE_split(st, ed, mat_raw, Net_sparse, bin_name_use, 
         plt.savefig(save_name, format='svg', transparent=True)
     plt.show()
 
-def draw_loss_record(loss_record, x_lim = '', y_lim = '', label = ''):
+def draw_loss_record(loss_record, x_lim = '', y_lim = '', label = '', fgsize = (4, 3)):
+    plt.figrue(figsize=(fgsize[0], fgsize[-1]))
     if label != '':
         plt.plot(loss_record, label = label)
     else:
@@ -1164,11 +1165,11 @@ def draw_map_multi_CI_old(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi,
 
 def draw_map_multi_CI(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi, window_l, ci_peak_multi,
                       resolution, save_name, p_cut, target_site=[], bin_size=10, TAD_l=[],
-                      color_multi=False, score_type='No', h_range=(10, 90)):
+                      color_multi=False, score_type='No', h_range=(10, 90), fgsize = (6, 10)):
     st_split = int(bin_name_use[0].split(':')[-1].split('-')[0]) / resolution
     start_ = (st + st_split) * resolution
     end_ = (ed + st_split) * resolution
-    plt.figure(figsize=(6, 10))
+    plt.figure(figsize=(fgsize[0], fgsize[-1]))
     x_axis_range = range(0, ed - st)
     cord_list = []
     pos_list = []

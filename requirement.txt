@@ -10,10 +10,5 @@ scikit-learn==1.0.2
 scikit-image==0.18.3
 rpy2==3.1.0
 umap-learn==0.5.2
-torch==1.8.2
-torch-geometric==2.0.1
-torch-cluster==1.5.9
-torch-scatter==2.0.8
-torch-sparse==0.6.12
-
-
+torch==1.13.1
+torch-geometric==2.3.1

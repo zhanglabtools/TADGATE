@@ -7,7 +7,8 @@ from torch import Tensor
 import torch.nn.functional as F
 from torch.nn import Parameter
 import torch.nn as nn
-from torch_sparse import SparseTensor, set_diag
+#from torch_sparse import SparseTensor, set_diag
+from torch_geometric.utils.sparse import SparseTensor
 from torch_geometric.nn.dense.linear import Linear
 from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.utils import remove_self_loops, add_self_loops, softmax
@@ -174,7 +175,7 @@ class GATConv(MessagePassing):
                 edge_index, _ = remove_self_loops(edge_index)
                 edge_index, _ = add_self_loops(edge_index, num_nodes=num_nodes)
             elif isinstance(edge_index, SparseTensor):
-                edge_index = set_diag(edge_index)
+                edge_index = edge_index.set_diag()
 
         # propagate_type: (x: OptPairTensor, alpha: OptPairTensor)
         out = self.propagate(edge_index, x=x, alpha=alpha, size=size)

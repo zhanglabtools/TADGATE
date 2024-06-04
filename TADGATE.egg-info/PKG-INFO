@@ -1,0 +1,23 @@
+Metadata-Version: 2.1
+Name: TADGATE
+Version: 1.0.1
+Summary: A versatile frame to uncover topologically associating domains from three-dimensional genome maps
+Home-page: https://github.com/zhanglabtools/TADGATE
+Author: Dachang Dang
+Author-email: dangdachang@163.com
+License: MIT
+Requires-Python: >=3.8.0
+License-File: LICENSE
+Requires-Dist: scanpy==1.8.2
+Requires-Dist: scikit-learn==1.0.2
+Requires-Dist: scikit-image==0.18.3
+Requires-Dist: scipy==1.7.3
+Requires-Dist: pandas==1.4.1
+Requires-Dist: torch==1.13.1
+Requires-Dist: torch-geometric==2.3.1
+Requires-Dist: tqdm==4.63.0
+Requires-Dist: rpy2==3.1.0
+Requires-Dist: umap-learn==0.5.2
+Requires-Dist: matplotlib==3.5.1
+Requires-Dist: seaborn==0.12.2
+Requires-Dist: h5py==3.6.0
