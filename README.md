@@ -1,7 +1,7 @@
 
 ## TADGATE 
 
-<img src="./TADGATE_logo.png" align="right"  width="35%" height="35%" />
+<img src="./TADGATE_logo.png" align="right"  width="40%" height="40%" />
 
 <div style="text-align: justify;">Topologically associating domains (TADs) have emerged as basic structural and functional units of genome organization. However, accurately identifying TADs from sparse chromatin contact maps <br> remain challenging. Here, we developed TADGATE to identify TADs <br> in Hi-C contact map with a graph attention autoencoder. It impute <br> and smooth the sparse chromatin contact maps while preserving or enhancing their topological domains. TADGATE can output imputed <br> Hi-C contact maps with clear topological structures. Additionally, it <br> can provide embeddings for each chromatin bin, and the learned <br> attention patterns effectively depict the positions of TAD boundaries.</div>
 
