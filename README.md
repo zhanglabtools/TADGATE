@@ -1,4 +1,4 @@
-<img src="./TADGATE_logo.png"  width="65%" height="65%"/>
+<img src="./TADGATE_logo.png"  width="35%" height="35%"/>
 
 # TADGATE
 
