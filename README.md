@@ -1,5 +1,5 @@
 
-# TADGATE <img src="./TADGATE_logo.png" align="right"  width="35%" height="35%" />
+# TADGATE <img src="./TADGATE_logo.png" align="right"  width="45%" height="45%" />
 
 
 
