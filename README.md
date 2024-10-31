@@ -88,6 +88,15 @@ See [TADGATE usage.ipynb](./Tutorial/TADGATE_usage.ipynb).
 
 The data used in the tutorial can be downloaded [here](https://drive.google.com/drive/folders/1B6Hp3kUgmjkm-IIIQZ7A3WR3iwEgtb0O).
 
+### For Command Line Interface(CLI) user
+
+The parameter file for TADGATE needs to be prepared according to the file in [the example](./parameters.txt).
+
+```
+cd TADGATE
+python TADGATE_CLI.py [path/to/you/paramaters.txt]
+```
+
 ### Support
 
 If you have any issues, please let us know. We have a mailing list located at:

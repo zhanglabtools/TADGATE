@@ -1,0 +1,48 @@
+# Data type [dense sparse cool mcool hic]
+dtype = dense
+
+# Data input path
+# For dense type, input_path should be the root directory of the dense chromatin contact matrix. The dense matrices are named as chr_*_dense_matrix.bed, where * represents the chromosome number. Each dense matrix is a non-negative symmetric matrix of size N x N, where N represents bin number.
+# For sparse type, input_path should be the root directory of the sparse chromatin contact matrix. The sparse matrices are named as chr_*_sparse_matrix.bed, where * represents the chromosome number. Each sparse matrix is a matrix of size N x 3, where N represents bin number, The first two columns represent the indices of the bins, while the third column represents the interaction count between these two bins. 
+# For cool、mcool、hic, input_path should be the file location.
+input_path = /you/input/path
+
+# result save path
+output_path = /your/output/path
+
+# Return the attention mat or not
+attention_mat = False
+
+# Chromosome number(s): Input the chromosome number(s) needed for calculation. It can be individual numbers or a range.
+chr_num = 7
+
+# Data resolution (bin/bp)
+resolution = 50000
+
+# chromosome size file for your reference genome, the first column is the chromosome identifier, and the second column is the chromosome length, such as chr1 249250621.
+chr_size_file = /you/input/path/hg19_chr_size.bed
+
+
+# parameters for graph attention auto-encoder. graph_radius 
+graph_radius = 2
+split_size = 'all'
+layer_node1 = 500
+layer_node2 = 100
+lr = 0.001
+weight_decay = 0.0001
+num_epoch = 500
+weight_use = 'Fix'
+weight_rate = 0.5
+weight_range = 100
+
+# paramaters for TAD detection
+bd_weight_list = [1.5, 1.5, 1, 1]
+cluster_method = 'Mclust'
+wd_ci = 5
+wd_p = 3
+dist = 3
+window_range = 500000
+pvalue_cut = 0.05
+exp_length = 50000
+length_cut = 3
+filter_method = 'strict'
