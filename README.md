@@ -29,8 +29,10 @@ TADGATE can impute the sparse chromatin contact maps with enhanced topological d
 TADGATE can impute the single-cell chromatin contact maps and identify TAD-like domains.
 <br>
 <p align="center">
-<img src="./TADGATE_single_cell1.PNG"  width="45%" height="45%"/>
-  <img src="./TADGATE_single_cell2.PNG"  width="45%" height="45%"/>
+<img src="./TADGATE_single_cell1.PNG"  width="50%" height="50%"/>
+</p>
+<p align="center">
+  <img src="./TADGATE_single_cell2.PNG"  width="50%" height="50%"/>
 </p>
 
 ## Getting start
