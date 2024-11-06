@@ -8,13 +8,6 @@
 
 ## Overview
 
-TADGATE consists of several steps:
-
-1. Construct a neighborhood graph to reflect the adjacency relationship of chromatin bins in the genome.
-2. Each bin serves as a sample and its interaction vector serves as the sample feature. We train a  graph attention autoencoder with the pre-defined neighborhood graph (green layers with graph attention) to reconstruct the interaction vector of each bin.  
-3. We can get the embeddings for each chromatin bin and all the reconstructed interaction vectors constitute the imputed map.  The valleys in the attention sum profile of the attention map correspond well to the TAD boundaries in the contact map.
-4. We can combine the original and the imputed Hi-C contact maps, the embeddings of chromatin bins, and attention patterns learned by the model to identify TADs.
-
 
 <p align="center">
 <img src="./TADGATE_overview.png"  width="65%" height="65%"/>
@@ -33,7 +26,6 @@ TADGATE can impute the sparse chromatin contact maps with enhanced topological d
 <br>
 <p align="center">
 <img src="./TADGATE_imputed.png"  width="45%" height="45%"/>
-
 </p>
 
 
@@ -78,13 +70,15 @@ pip install .
 
 
 
-The use of the mclust algorithm  requires the rpy2 package (Python) and the mclust package (R). See https://pypi.org/project/rpy2/ and https://cran.r-project.org/web/packages/mclust/index.html for detail.  (optional)
+The use of the mclust algorithm  requires the rpy2 package (Python) and the mclust package (R). See https://pypi.org/project/rpy2/ and https://cran.r-project.org/web/packages/mclust/index.html for detail.  You can also use K-means for instead, if you can't use mclust.
 
 
 
 ### Tutorial
 
-See [TADGATE usage.ipynb](./Tutorial/TADGATE_usage.ipynb).
+TADGATE support four kinds of input format of Hi-C contact map: dense contact matrix, sparse contact matrix, .hic file produced by [juicer tools](https://github.com/aidenlab/juicer) or .mcool file produced by [cooler](https://github.com/open2c/cooler).
+
+More detailed information can be seen in [TADGATE usage.ipynb](./Tutorial/TADGATE_usage.ipynb).
 
 The data used in the tutorial can be downloaded [here](https://drive.google.com/drive/folders/1B6Hp3kUgmjkm-IIIQZ7A3WR3iwEgtb0O).
 

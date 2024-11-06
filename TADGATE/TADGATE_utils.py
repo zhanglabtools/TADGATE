@@ -24,6 +24,7 @@ from . import TADGATE_pyG
 
 
 
+
 def save_data(file, objects):
     """
     Save data to file
@@ -197,6 +198,51 @@ def build_spatial_net(adata, row_bad, expand_num):
     return Spatial_Net, Net_sparse
 
 
+def Batch_Data_two_dim(adata, num_batch_x, num_batch_y, spatial_key=['X', 'Y']):
+    """
+    Split spatial data into batches
+    :param adata: scanpy data, scanpy data with node feature and spatial network
+    :param num_batch_x: int, number of batches along x-axis
+    :param num_batch_y: int, number of batches along y-axis
+    :param spatial_key: list, key for spatial coordinates
+    :return: Batch_list: list, list of batches
+    """
+    Sp_df = adata.obs.loc[:, spatial_key].copy()
+    Sp_df = np.array(Sp_df)
+    batch_x_coor = [np.percentile(Sp_df[:, 0], (1/num_batch_x)*x*100) for x in range(num_batch_x+1)]
+    batch_y_coor = [np.percentile(Sp_df[:, 1], (1/num_batch_y)*x*100) for x in range(num_batch_y+1)]
+
+    Batch_list = []
+    for it_x in range(num_batch_x):
+        for it_y in range(num_batch_y):
+            min_x = batch_x_coor[it_x]
+            max_x = batch_x_coor[it_x+1]
+            min_y = batch_y_coor[it_y]
+            max_y = batch_y_coor[it_y+1]
+            temp_adata = adata.copy()
+            temp_adata = temp_adata[temp_adata.obs[spatial_key[0]].map(lambda x: min_x <= x <= max_x)]
+            temp_adata = temp_adata[temp_adata.obs[spatial_key[1]].map(lambda y: min_y <= y <= max_y)]
+            Batch_list.append(temp_adata)
+    return Batch_list
+
+
+def Batch_Data_SingleDim(adata, num_batch, spatial_key='X'):
+    Sp_df = adata.obs.loc[:, spatial_key].copy()
+    Sp_df = np.array(Sp_df)
+    batch_coor = [np.percentile(Sp_df, (1 / num_batch) * x * 100) for x in range(num_batch + 1)]
+
+    Batch_list = []
+    for it in range(num_batch):
+        min_coor = batch_coor[it]
+        max_coor = batch_coor[it + 1]
+        temp_adata = adata.copy()
+        temp_adata = temp_adata[temp_adata.obs[spatial_key].map(lambda x: min_coor <= x <= max_coor)]
+        Batch_list.append(temp_adata)
+
+    return Batch_list
+
+
+
 def get_dense_network(Net_sparse, length):
     """
     Build dense spatial matrix from sparse spatial matrix according to bin symbol along chromosome
@@ -217,15 +263,19 @@ def get_dense_network(Net_sparse, length):
     return mat_dense
 
 
-def get_dense_hic_mat(Net_sparse, length):
+def get_dense_hic_mat(Net_sparse, length, resolution = None):
     """
     Build dense Hi-C matrix from sparse Hi-C matrix according to bin symbol along chromosome
     :param Net_sparse:  pandas dataframe, sparse Hi-C matrix
     :param length:  int, number of rows or columns for matrix
     :return:  mat_dense: numpy array, dense Hi-C network
     """
-    row = list(Net_sparse['bin1'])
-    col = list(Net_sparse['bin2'])
+    if resolution == None:
+        row = list(Net_sparse['bin1'])
+        col = list(Net_sparse['bin2'])
+    else:
+        row = list(np.array((Net_sparse['bin1']) / resolution).astype('int'))
+        col = list(np.array((Net_sparse['bin2']) / resolution).astype('int'))
     val = list(Net_sparse['value'])
     mat_hic_sparse = scipy.sparse.csr_matrix((val, (row, col)), shape = (length, length))
     mat_dense_up = mat_hic_sparse.toarray()
@@ -235,7 +285,6 @@ def get_dense_hic_mat(Net_sparse, length):
     mat_dense_diag = np.diag(np.diag(mat_dense_up))
     mat_dense = mat_dense_up + mat_dense_low - mat_dense_diag
     return mat_dense
-
 
 def get_matrix_split(mat_hic, length, window, bin_name_list, resolution, diag_cut, cut = False):
     """
@@ -255,6 +304,8 @@ def get_matrix_split(mat_hic, length, window, bin_name_list, resolution, diag_cu
     mat_split_all = {}
     row_bad_all = {}
     n = length
+    if diag_cut == 'all':
+        diag_cut = 0
     for i in range(int(np.ceil(2*n/window))):
         st = max(0, window//2*i-window//4)
         mid1 = st + window//2*i-max(0,window//2*i-window//4)
@@ -307,6 +358,7 @@ def get_split_mat_spatial_network(mat_split_all, row_bad_all, expand_num):
         adata = mat_split_all[i]
         Spatial_Net, Net_sparse = build_spatial_net(adata, row_bad, expand_num)
         adata.uns['Spatial_Net'] = Spatial_Net
+        adata.obsm['genome_order'] = np.array(range(len(adata.obs_names)))
         mat_split_all[i] = adata
         spatial_net_all[i] = Net_sparse
     return mat_split_all, spatial_net_all
@@ -315,7 +367,7 @@ def get_split_mat_spatial_network(mat_split_all, row_bad_all, expand_num):
 def get_diagnal_near_mask(window, wd, diag_cut = 0):
     """
     Get mask for diagonals. The mask is used to filter out the pixels near diagonal or far from diagonal.
-    if diag_cut > 0, it will be a mask for pixels near diagonal from diag_cut to wd.
+    if diag_cut > 0, it will be a mask for pixels near diagonal to diag_cut. The region between diag_cut and wd will be enhanced.
     if diag_cut = 0, it will be a mask for pixels far from diagonal from wd to window.
     :param window: int, size of window
     :param wd: int, number of diagonals to cut out, wd to window will be zero
@@ -352,6 +404,23 @@ def get_diagnal_near_mask(window, wd, diag_cut = 0):
     return mat_mask
 
 
+def ignal_zero_pos_in_mask_mat(mat_part, mat_mask0, impute_range):
+    """
+    Filter out pixels far from diagonal in mask matrix
+    :param mat_part:  numpy array, Hi-C contact map
+    :param mat_mask0: numpy array, mask matrix
+    :param impute_range:  int, number of diagonals to cut out
+    :return:  mat_mask0_new: numpy array, mask matrix
+    """
+    mat_mask0_new = copy.deepcopy(mat_mask0)
+    k = impute_range
+    n = len(mat_part)
+    indices = np.abs(np.arange(n) - np.arange(n)[:, np.newaxis]) > k
+    mat_part[indices] = 1
+    mat_mask0_new[np.where(mat_part == 0)] = 0.5
+    return mat_mask0_new
+
+
 def mat_mask_batch_to_device(mat_mask0, device, batch = 1):
     """
     Transfer mask to device
@@ -376,14 +445,14 @@ def Transfer_pytorch_Data(adata):
     :return: data: pytorch data, pytorch data with node feature and spatial network
     """
     G_df = adata.uns['Spatial_Net'].copy()
-
     cells = np.array(adata.obs_names)
     cells_id_tran = dict(zip(cells, range(cells.shape[0])))
     G_df['Cell1'] = G_df['Cell1'].map(cells_id_tran)
     G_df['Cell2'] = G_df['Cell2'].map(cells_id_tran)
-
     G = sp.coo_matrix((np.ones(G_df.shape[0]), (G_df['Cell1'], G_df['Cell2'])), shape=(
         adata.n_obs, adata.n_obs))
+
+
     #G = G + sp.eye(G.shape[0])
 
     edgeList = np.nonzero(G)
@@ -404,8 +473,99 @@ def Transfer_pytorch_Data(adata):
     return data
 
 
+def mat_diag_extract(mat_use, diag_target):
+    n = mat_use.shape[0]
+    m = 2 * diag_target + 1
+    # 对矩阵进行填充，以便处理边界情况
+    padded_mat = np.pad(mat_use, ((0, 0), (diag_target, diag_target)), mode='constant', constant_values=-1)
+    # 生成列索引
+    col_indices = np.arange(n)[:, None] + np.arange(m)
+    # 使用高级索引提取对角线附近的元素
+    mat_extract = padded_mat[np.arange(n)[:, None], col_indices]
+    return mat_extract, col_indices
+
+def reconstruct_original_map(mat_use, mat_ext, col_indices, diag_target):
+    # 初始化与 mat_use 相同形状的新矩阵 mat_rec
+    mat_rec = np.full_like(mat_use, fill_value=0)
+    padded_mat = np.pad(mat_rec, ((0, 0), (diag_target, diag_target)), mode='constant', constant_values=-1)
+    for i in range(len(mat_ext)):
+        padded_mat[i, col_indices[i]] = mat_ext[i]
+    mat_rec = padded_mat[:, diag_target : diag_target + len(mat_use)]
+    return mat_rec
+
+
+def neighbor_ave_gpu(A, pad):
+    """
+    Average pooling for Hi-C contact map
+    :param A: numpy array, Hi-C contact map
+    :param pad: int, padding for convolution
+    :return: numpy array, Hi-C contact map after average pooling
+    """
+    if pad == 0:
+        return torch.from_numpy(A).float().cuda()
+    ll = pad * 2 + 1
+    conv_filter = torch.ones(1, 1, ll, ll).cuda()
+    B = F.conv2d(torch.from_numpy(A[None, None, :, :]).float().cuda(), conv_filter, padding=pad * 2)
+    return (B[0, 0, pad:-pad, pad:-pad] / float(ll * ll)).cpu().numpy()
+
+
+def random_walk_gpu(A, rp):
+    """
+    Random walk for Hi-C contact map
+    :param A: numpy array, Hi-C contact map
+    :param rp: float, restart probability of random walk
+    :return:  numpy array, Hi-C contact map after random walk
+    """
+    if rp == 1:
+        return A
+    ngene, _ = A.shape
+    A = torch.from_numpy(A).float().cuda()
+    A = A - torch.diag(torch.diag(A))
+    A = A + torch.diag(torch.sum(A, 0) == 0).float()
+    P = torch.div(A, torch.sum(A, 0))
+    Q = torch.eye(ngene).cuda()
+    I = torch.eye(ngene).cuda()
+    for i in range(30):
+        Q_new = (1 - rp) * I + rp * torch.mm(Q, P)
+        delta = torch.norm(Q - Q_new, 2)
+        Q = Q_new
+        if delta < 1e-6:
+            break
+    return Q.cpu().numpy()
+
+
+def impute_gpu(A, pad, rp):
+    """
+    Impute Hi-C contact map with average pooling and random walk
+    :param A: numpy array, Hi-C contact map
+    :param pad: int, padding for convolution
+    :param rp: float, restart probability of random walk
+    :return: numpy array, Hi-C contact map after imputation
+    """
+    ngene, _ = A.shape
+    A = neighbor_ave_gpu(A, pad)
+    if rp == -1:
+        Q = A[:]
+    else:
+        Q = random_walk_gpu(A, rp)
+    return Q.reshape(ngene, ngene)
+
+def create_batch_mask(batch, adata, mat_mask, spatial_key):
+    """
+    Create mask for batch
+    :param batch: scanpy data, scanpy data with node feature and spatial network
+    :param adata: scanpy data, scanpy data with node feature and spatial network
+    :param mat_mask: numpy array, mask for diagonals
+    :param spatial_key: list, key for spatial coordinates
+    """
+    batch_indices = batch.batch_indices
+    batch_mask = mat_mask[batch_indices]
+    return batch_mask
+
 def train_TADGATE(adata, mat_mask, scale_f, layer_node1, layer_node2, lr, weight_decay,
-                  num_epoch, device, embed_attention = False, seed = 666, verbose=True):
+                  num_epoch, device, embed_attention = False, batch_use = False,
+                  batch_list = [], mask_list = [],
+                  seed = 666, verbose=True):
     """
     Train TADGATE model
     :param adata: scanpy data, scanpy data with node feature and spatial network
@@ -418,6 +578,8 @@ def train_TADGATE(adata, mat_mask, scale_f, layer_node1, layer_node2, lr, weight
     :param num_epoch: int, number of epochs
     :param device: torch device, device to use
     :param embed_attention: bool, whether to use attention mechanism in embedding layer
+    :param batch_use: bool, whether to use batch training
+    :param num_batch_x: int, number of batches along x-axis
     :param seed: int, random seed
     :param verbose: bool, whether to print training process
     :return: model: TADGATE model, trained TADGATE model
@@ -429,42 +591,83 @@ def train_TADGATE(adata, mat_mask, scale_f, layer_node1, layer_node2, lr, weight
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
 
-    data = Transfer_pytorch_Data(adata)
-    if verbose:
-        print('Train TADGATE....')
-    model = TADGATE_pyG.TADGATE(in_channels = data.x.shape[1], layer1_nodes = layer_node1, embed_nodes = layer_node2).to(device)
-    data = data.to(device)
+    if not batch_use:
+        data = Transfer_pytorch_Data(adata)
+        if verbose:
+            print('Train TADGATE....')
+        model = TADGATE_pyG.TADGATE(in_channels = data.x.shape[1], layer1_nodes = layer_node1, embed_nodes = layer_node2).to(device)
+        data = data.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
-    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.8, last_epoch=-1)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=False,
-                                                           threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08)
-    loss_record = []
-    for epoch in tqdm(range(1, num_epoch + 1)):
-        model.train()
-        optimizer.zero_grad()
-        z, out = model(data.x, data.edge_index, scale_f, embed_attention=embed_attention, return_att = False)
-        #if epoch < 0.1*num_epoch:
-            #out_new = (out.data + out.data.T) / 2
-            #out_new[out_new < 0] = 0
-            #out.data = out_new.data
-        out_mask = torch.masked_select(out, mat_mask)
-        data_mask = torch.masked_select(data.x, mat_mask)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
+        #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.8, last_epoch=-1)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=False,
+                                                               threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08)
+        loss_record = []
+        for epoch in tqdm(range(1, num_epoch + 1), leave=False):
+            model.train()
+            optimizer.zero_grad()
+            z, out = model(data.x, data.edge_index, scale_f, embed_attention=embed_attention, return_att = False)
+            #if epoch < 0.1*num_epoch:
+                #out_new = (out.data + out.data.T) / 2
+                #out_new[out_new < 0] = 0
+                #out.data = out_new.data
+            out_mask = torch.masked_select(out, mat_mask)
+            data_mask = torch.masked_select(data.x, mat_mask)
 
-        loss1 = F.mse_loss(data_mask, out_mask)
-        #loss1 = F.mse_loss(data.x, out)  # F.nll_loss(out[data.train_mask], data.y[data.train_mask])
-        loss = loss1
-        loss_record.append(loss.to('cpu').detach().numpy())
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
-        optimizer.step()
-        scheduler.step(loss)
+            loss = F.mse_loss(data_mask, out_mask)
+            loss_record.append(loss.to('cpu').detach().numpy())
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
+            optimizer.step()
+            scheduler.step(loss)
+    else:
+
+        for temp in batch_list:
+            temp.to(device)
+
+        from torch_geometric.loader import DataLoader
+        # batch_size=1
+        loader = DataLoader(batch_list, batch_size=1, shuffle = True)
+
+        model = TADGATE_pyG.TADGATE(in_channels=batch_list[0].x.shape[1], layer1_nodes=layer_node1, embed_nodes=layer_node2).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
+        # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.8, last_epoch=-1)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20,
+                                                               verbose=False,
+                                                               threshold=0.0001, threshold_mode='rel', cooldown=0,
+                                                               min_lr=0, eps=1e-08)
+        loss_record = []
+        for epoch in tqdm(range(1, num_epoch + 1)):
+            total_loss = 0
+            for batch in loader:
+                model.train()
+                optimizer.zero_grad()
+                batch_mask = create_batch_mask(batch, mat_mask)
+                z, out = model(batch.x, batch.edge_index, scale_f, embed_attention=embed_attention, return_att=False)
+                # if epoch < 0.1*num_epoch:
+                # out_new = (out.data + out.data.T) / 2
+                # out_new[out_new < 0] = 0
+                # out.data = out_new.data
+                out_mask = torch.masked_select(out, batch_mask)
+                data_mask = torch.masked_select(batch.x, batch_mask)
+
+                loss = F.mse_loss(data_mask, out_mask)
+                total_loss += loss.item()
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
+                optimizer.step()
+            scheduler.step(total_loss.item())
+            loss_record.append(total_loss.item())
+
     return model, loss_record
 
 
 def train_TADGATE_weight(adata, mat_weight, scale_f, layer_node1, layer_node2, lr, weight_decay,
-                         num_epoch, device, embed_attention = False, seed = 666, verbose=True):
+                         num_epoch, device, embed_attention = False, batch_use = False,
+                         batch_list = [], mask_list = [],
+                         seed = 666, verbose=True):
     """
     Train TADGATE model with pre-defined weight near diagonal
     :param adata: scanpy data, scanpy data with node feature and spatial network
@@ -477,6 +680,8 @@ def train_TADGATE_weight(adata, mat_weight, scale_f, layer_node1, layer_node2, l
     :param num_epoch: int, number of epochs
     :param device: torch device, device to use
     :param embed_attention: bool, whether to use attention mechanism in embedding layer
+    :param batch_use: bool, whether to use batch training
+    :param num_batch_x: int, number of batches along x-axis
     :param seed: int, random seed
     :param verbose: bool, whether to print training process
     :return:  model: TADGATE model, trained TADGATE model
@@ -489,37 +694,74 @@ def train_TADGATE_weight(adata, mat_weight, scale_f, layer_node1, layer_node2, l
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
 
-    data = Transfer_pytorch_Data(adata)
-    if verbose:
-        print('Train TADGATE....')
-    model = TADGATE_pyG.TADGATE(in_channels = data.x.shape[1], layer1_nodes = layer_node1, embed_nodes = layer_node2).to(device)
-    data = data.to(device)
+    if not batch_use:
+        data = Transfer_pytorch_Data(adata)
+        if verbose:
+            print('Train TADGATE....')
+        model = TADGATE_pyG.TADGATE(in_channels = data.x.shape[1], layer1_nodes = layer_node1, embed_nodes = layer_node2).to(device)
+        data = data.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
-    #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
-    #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.8, last_epoch=-1)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=False,
-                                                           threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08)
-    loss_record = []
-    for epoch in tqdm(range(1, num_epoch + 1)):
-        model.train()
-        optimizer.zero_grad()
-        z, out = model(data.x, data.edge_index, scale_f, embed_attention=embed_attention, return_att = False)
-        #if epoch < 0.1*num_epoch:
-            #out_new = (out.data + out.data.T) / 2
-            #out_new[out_new < 0] = 0
-            #out.data = out_new.data
-        data_weight = data.x * (torch.from_numpy(mat_weight).to(device))
-        out_weight = out * (torch.from_numpy(mat_weight).to(device))
-        loss1 = F.mse_loss(data_weight, out_weight)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        #scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.5)
+        #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.8, last_epoch=-1)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20, verbose=False,
+                                                               threshold=0.0001, threshold_mode='rel', cooldown=0, min_lr=0, eps=1e-08)
+        loss_record = []
+        for epoch in tqdm(range(1, num_epoch + 1)):
+            model.train()
+            optimizer.zero_grad()
+            z, out = model(data.x, data.edge_index, scale_f, embed_attention=embed_attention, return_att = False)
+            #if epoch < 0.1*num_epoch:
+                #out_new = (out.data + out.data.T) / 2
+                #out_new[out_new < 0] = 0
+                #out.data = out_new.data
+            data_weight = data.x * (torch.from_numpy(mat_weight).to(device))
+            out_weight = out * (torch.from_numpy(mat_weight).to(device))
+            loss = F.mse_loss(data_weight, out_weight)
 
-        #loss1 = F.mse_loss(data.x, out)  # F.nll_loss(out[data.train_mask], data.y[data.train_mask])
-        loss = loss1
-        loss_record.append(loss.to('cpu').detach().numpy())
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
-        optimizer.step()
-        scheduler.step(loss)
+            #loss = F.mse_loss(data.x, out)  # F.nll_loss(out[data.train_mask], data.y[data.train_mask])
+            loss_record.append(loss.to('cpu').detach().numpy())
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
+            optimizer.step()
+            scheduler.step(loss)
+    else:
+
+        for temp in batch_list:
+            temp.to(device)
+
+        from torch_geometric.loader import DataLoader
+        loader = DataLoader(batch_list, batch_size=1, shuffle=False)
+
+        model = TADGATE_pyG.TADGATE(in_channels = batch_list[0].x.shape[1], layer1_nodes=layer_node1,
+                                    embed_nodes = layer_node2).to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=20,
+                                                               verbose=False, threshold=0.0001, threshold_mode='rel',
+                                                               cooldown=0, min_lr=0, eps=1e-08)
+        loss_record = []
+        for epoch in tqdm(range(1, num_epoch + 1), leave=False):
+            total_loss = 0.0
+            mask_count = 0
+            for batch in loader:
+                model.train()
+                optimizer.zero_grad()
+
+                batch_mask = mask_list[mask_count]
+                mask_count += 1
+                z, out = model(batch.x, batch.edge_index, scale_f, embed_attention=embed_attention, return_att=False)
+
+                data_weight = batch.x * torch.from_numpy(batch_mask).to(device)
+                out_weight = out * torch.from_numpy(batch_mask).to(device)
+                loss = F.mse_loss(data_weight, out_weight)
+                total_loss += loss.item()
+
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 5.)
+                optimizer.step()
+
+            scheduler.step(total_loss)
+            loss_record.append(total_loss)
     return model, loss_record
 
 
@@ -575,8 +817,12 @@ def TADGATE_use(adata, model, device, scale_f, embed_attention, return_att = Tru
     # imputed matrix
     df_imputed_Data = pd.DataFrame(out.to('cpu').detach().numpy(), index=adata.obs_names, columns=adata.var_names)
     mat_imputed  = np.array(df_imputed_Data.values)
-    mat_imputed_sym = (mat_imputed + mat_imputed.T) / 2
-    mat_imputed_sym[mat_imputed_sym < 0 ] = 0
+
+    if mat_imputed.shape[0] == mat_imputed.shape[-1]:
+        mat_imputed_sym = (mat_imputed + mat_imputed.T) / 2
+        mat_imputed_sym[mat_imputed_sym < 0 ] = 0
+    else:
+        mat_imputed_sym = []
     # bin low-d representation
     df_rep_Data = pd.DataFrame(z.to('cpu').detach().numpy())
     mat_rep = df_rep_Data.values
@@ -763,7 +1009,7 @@ def get_HiC_rep_for_two_matrix(mat_raw, mat_imputed_sym, start_stratum = 1, end_
     return hic_rep
 
 
-def get_PCC_for_two_HiC_mat(mat_raw, mat_imputed_sym, K = 0):
+def get_PCC_for_two_HiC_mat(mat_raw, mat_imputed_sym, K = 40):
     """
     Get Pearson correlation coefficient for two Hi-C contact maps
     :param mat_raw: numpy array, raw Hi-C contact map
@@ -771,8 +1017,11 @@ def get_PCC_for_two_HiC_mat(mat_raw, mat_imputed_sym, K = 0):
     :param K: int, the diagonal offset to calculate PCC
     :return:  PCC: float, Pearson correlation coefficient
     """
-    mat_raw_vec= np.triu(mat_raw, k = K).flatten()
-    mat_imputed_vec =  np.triu(mat_imputed_sym, k = K).flatten()
+    mat_raw_vec = []
+    mat_imputed_vec = []
+    for i in range(1, K):
+        mat_raw_vec += list(np.diag(mat_raw, k = i))
+        mat_imputed_vec += list(np.diag(mat_imputed_sym, k = i))
     PCC = scipy.stats.pearsonr(mat_raw_vec, mat_imputed_vec)[0]
     return PCC
 
@@ -844,7 +1093,56 @@ def get_PSNR_for_two_HiC_mat_diag(mat_raw_norm, mat_imputed_sym_norm, win_size =
 
 
 
+def get_bin_tad_label(df_tad_mclust_fill, bin_num):
+    lb_hold = 0
+    bin_lb = np.zeros(bin_num) - 1
+    for i in range(len(df_tad_mclust_fill)):
+        domain = list(range(df_tad_mclust_fill['start'][i], df_tad_mclust_fill['end'][i] + 1))
+        domain = sorted(domain)
+        bin_lb[domain] = lb_hold
+        lb_hold += 1
+    return bin_lb
 
+def get_tad_fill_gap(Chr, df_tad_record, bin_num):
+    chr_l = []
+    st_l = []
+    ed_l = []
+    type_l = []
+    if df_tad_record['start'][0] >= 1:
+        chr_l.append(Chr)
+        st_l.append(0)
+        ed_l.append(df_tad_record['start'][0]-1)
+        type_l.append('gap')
+    for i in range(len(df_tad_record) - 1):
+        st = df_tad_record['start'][i]
+        ed = df_tad_record['end'][i]
+        st_n = df_tad_record['start'][i+1]
+        chr_l.append(Chr)
+        st_l.append(st)
+        ed_l.append(ed)
+        type_l.append('domain')
+        if st_n > ed + 1:
+            chr_l.append(Chr)
+            st_l.append(ed+1)
+            ed_l.append(st_n-1)
+            type_l.append('gap')
+    chr_l.append(Chr)
+    st = df_tad_record['start'][len(df_tad_record) - 1]
+    ed = df_tad_record['end'][len(df_tad_record) - 1]
+    st_l.append(st)
+    ed_l.append(ed)
+    type_l.append('domain')
+    if df_tad_record['end'][len(df_tad_record) - 1] < bin_num - 1:
+        chr_l.append(Chr)
+        st_l.append(ed+1)
+        ed_l.append(bin_num - 1)
+        type_l.append('gap')
+    df_tad_gap = pd.DataFrame(columns = ['chr', 'start', 'end', 'type'])
+    df_tad_gap['chr'] = chr_l
+    df_tad_gap['start'] = st_l
+    df_tad_gap['end'] = ed_l
+    df_tad_gap['type'] = type_l
+    return df_tad_gap
 
 
 

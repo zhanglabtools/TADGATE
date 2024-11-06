@@ -7,7 +7,7 @@ _deps = [
     "scikit-learn==1.0.2",
     "scikit-image==0.18.3",
     "scipy==1.7.3,",
-    "pandas==1.4.1",
+    "pandas==1.5.1",
     "torch==1.13.1",
     "torch-geometric==2.3.1",
     "tqdm==4.63.0",
@@ -15,7 +15,9 @@ _deps = [
     "umap-learn==0.5.2",
     "matplotlib==3.5.1",
     "seaborn==0.12.2",
-    "h5py==3.6.0"
+    "h5py==3.6.0",
+    "cooler==0.10.2",
+    "hic-straw==1.3.1"
 ]
 
 
@@ -84,13 +86,15 @@ install_requires = [
     deps["matplotlib"],
     deps["seaborn"],
     deps["h5py"],
+    deps["cooler"],
+    deps["hic-straw"]
 ]
 
 
 setup(
     name = "TADGATE",
-    version = "1.0.1",
-    description = "A versatile frame to uncover topologically associating domains from three-dimensional genome maps",
+    version = "2.0.0",
+    description = "A versatile framework to uncover topologically associating domains from three-dimensional genome maps",
     url = "https://github.com/zhanglabtools/TADGATE",
     author = "Dachang Dang",
     author_email = "dangdachang@163.com",

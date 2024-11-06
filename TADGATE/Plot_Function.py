@@ -5,6 +5,7 @@ import umap
 import seaborn as sns
 import numpy as np
 import pandas as pd
+import scipy
 from scipy import signal
 import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
@@ -28,6 +29,26 @@ def highlight_cell(x,y, ax=None, **kwargs):
     ax = ax or plt.gca()
     ax.add_patch(rect)
     return rect
+
+def get_dense_network(Net_sparse, length):
+    """
+    Build dense spatial matrix from sparse spatial matrix according to bin symbol along chromosome
+    :param Net_sparse: pandas dataframe, sparse spatial matrix
+    :param length: int, number of rows or columns for matrix
+    :return: mat_dense: numpy array, dense spatial network
+    """
+    row = list(Net_sparse['bin1'])
+    col = list(Net_sparse['bin2'])
+    val = list(Net_sparse['edge'])
+    mat_hic_sparse = scipy.sparse.csr_matrix((val, (row, col)), shape = (length, length))
+    mat_dense_up = mat_hic_sparse.toarray()
+    if (mat_dense_up == mat_dense_up.T).all():
+        return mat_dense_up
+    mat_dense_low = mat_dense_up.T
+    mat_dense_diag = np.diag(np.diag(mat_dense_up))
+    mat_dense = mat_dense_up + mat_dense_low - mat_dense_diag
+    return mat_dense
+
 
 def draw_graph_used_in_TADGATE_split(st, ed, mat_raw, Net_sparse, bin_name_use, Chr, resolution, bin_size,
                                      save_name=''):
@@ -62,7 +83,7 @@ def draw_graph_used_in_TADGATE_split(st, ed, mat_raw, Net_sparse, bin_name_use, 
             x_ticks_l.append(pos_label)
             y_ticks_l.append(str(pos / 1000000))
     region_name = Chr + ':' + str(start_ / 1000000) + '-' + str(end_ / 1000000) + ' Mb'
-    Net_dense = TL.get_dense_network(Net_sparse, len(bin_name_use))
+    Net_dense = get_dense_network(Net_sparse, len(bin_name_use))
     plt.figure(figsize=(12, 4))
     ### raw mat compare
     plt.subplot(121)
@@ -87,7 +108,7 @@ def draw_graph_used_in_TADGATE_split(st, ed, mat_raw, Net_sparse, bin_name_use, 
     plt.show()
 
 def draw_loss_record(loss_record, x_lim = '', y_lim = '', label = '', fgsize = (4, 3)):
-    plt.figrue(figsize=(fgsize[0], fgsize[-1]))
+    plt.figure(figsize=(fgsize[0], fgsize[-1]))
     if label != '':
         plt.plot(loss_record, label = label)
     else:
@@ -330,29 +351,32 @@ def draw_tad_region(st, ed, color, size_v, size_h):
 
 def draw_tad_region_upper_half(st, ed, range_t, color, size_v, size_h):
     if st < 0:
-        plt.vlines(ed, 0, ed, colors=color, linestyles='solid', linewidths=size_v)
+        #plt.vlines(ed, 0, ed, colors=color, linestyles='solid', linewidths=size_v)
+        plt.plot([ed,ed], [0, ed], color=color, linestyle='solid', linewidth=size_v)
     elif ed > range_t:
-        plt.hlines(st, st, range_t, colors=color, linestyles='solid', linewidths=size_v)
+        #plt.hlines(st, st, range_t, colors=color, linestyles='solid', linewidths=size_v)
+        plt.plot([st, range_t], [st, st], color=color, linestyle='solid', linewidth=size_v)
     else:  ## 画竖线
         # plt.vlines(st, st, ed, colors=color, linestyles='solid', linewidths=size_v)
-        plt.vlines(ed, st, ed, colors=color, linestyles='solid', linewidths=size_v)
+        plt.plot([ed, ed], [st, ed], color=color, linestyle='solid', linewidth=size_v)
         ## 画横线
-        plt.hlines(st, st, ed, colors=color, linestyles='solid', linewidths=size_h)
-        # plt.hlines(ed, st, ed, colors=color, linestyles='solid', linewidths=size_h)
+        #plt.hlines(st, st, ed, colors=color, linestyles='solid', linewidths=size_h)
+        plt.plot([st, ed], [st, st], color=color, linestyle='solid', linewidth=size_v)
 
 def draw_tad_region_lower_half(st, ed, range_t, color, size_v, size_h):
     if st < 0:
-        plt.hlines(ed, 0, ed, colors=color, linestyles='solid', linewidths=size_h)
+        #plt.hlines(ed, 0, ed, colors=color, linestyles='solid', linewidths=size_h)
+        plt.plot([0, ed], [ed, ed], color=color, linestyle='solid', linewidth=size_v)
     elif ed > range_t:
-        plt.vlines(st, st, range_t, colors=color, linestyles='solid', linewidths=size_v)
+        #plt.vlines(st, st, range_t, colors=color, linestyles='solid', linewidths=size_v)
+        plt.plot([st, st], [st, range_t], color=color, linestyle='solid', linewidth=size_v)
     else:
         ## 画竖线
-        plt.vlines(st, st, ed, colors=color, linestyles='solid', linewidths=size_v)
-        # plt.vlines(ed, st, ed, colors=color, linestyles='solid', linewidths=size_v)
+        #plt.vlines(st, st, ed, colors=color, linestyles='solid', linewidths=size_v)
+        plt.plot([st, st], [st, ed], color=color, linestyle='solid', linewidth=size_v)
         ## 画横线
-        # plt.hlines(st, st, ed, colors=color, linestyles='solid', linewidths=size_h)
-        plt.hlines(ed, st, ed, colors=color, linestyles='solid', linewidths=size_h)
-
+        #plt.hlines(ed, st, ed, colors=color, linestyles='solid', linewidths=size_h)
+        plt.plot([st, ed], [ed, ed], color=color, linestyle='solid', linewidth=size_v)
 
 def draw_pair_wise_map_compare_TADs(Chr, st, ed, bin_name_use, mat_dense1, mat_dense2, resolution,
                                       m1='', m2='', TAD_list_1=[], TAD_list_2=[],
@@ -511,7 +535,7 @@ def draw_pair_wise_map_compare_TADs_same_matrix(Chr, st, ed, bin_name_use, mat_d
 
 def draw_multi_mat_compare_multi_row_with_TADs(st, ed, mat_list, mat_para_list, TAD_list, bin_name_use, Chr, resolution, col_num,
                                                title_name_l='', fgsize=(12, 6), bin_size=50, save_name='', ori='h', bar_label = True,
-                                               ticks_draw = True):
+                                               ticks_draw = True, frame_w = 5):
     st_split = int(bin_name_use[0].split(':')[-1].split('-')[0]) / resolution
     start_ = (st + st_split) * resolution
     end_ = (ed + st_split) * resolution
@@ -599,9 +623,9 @@ def draw_multi_mat_compare_multi_row_with_TADs(st, ed, mat_list, mat_para_list, 
                 ed_tad = TAD[1] - st + 1
                 # draw_tad_region(st_tad, ed_tad, TAD_color_1, size_v=5, size_h=5)
                 if upper == True:
-                    draw_tad_region_upper_half(st_tad, ed_tad, range_t, tad_color, size_v=5, size_h=5)
+                    draw_tad_region_upper_half(st_tad, ed_tad, range_t, tad_color, size_v=frame_w, size_h=frame_w)
                 if lower == True:
-                    draw_tad_region_lower_half(st_tad, ed_tad, range_t, tad_color, size_v=5, size_h=5)
+                    draw_tad_region_lower_half(st_tad, ed_tad, range_t, tad_color, size_v=frame_w, size_h=frame_w)
         cbar = plt.colorbar(fraction=0.05, pad=0.05)
         if bar_label == False:
             cbar.set_ticklabels([])
@@ -1164,8 +1188,10 @@ def draw_map_multi_CI_old(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi,
 
 
 def draw_map_multi_CI(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi, window_l, ci_peak_multi,
-                      resolution, save_name, p_cut, target_site=[], bin_size=10, TAD_l=[],
-                      color_multi=False, score_type='No', h_range=(10, 90), fgsize = (6, 10)):
+                      resolution, save_name, track_cut, bin_size=10, TAD_l=[],
+                      TAD_dict = {'upper' : True, 'lower': False, 'color': 'black', 'linewidth': 5, 'linestyle': 'solid'},
+                      color_supply = [], color_multi=False, score_type='No', h_range=(10, 90), track_range = [],
+                      fgsize = (6, 10), subfig = (11, 6)):
     st_split = int(bin_name_use[0].split(':')[-1].split('-')[0]) / resolution
     start_ = (st + st_split) * resolution
     end_ = (ed + st_split) * resolution
@@ -1190,7 +1216,10 @@ def draw_map_multi_CI(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi, win
             y_ticks_l.append(str(pos / 1000000))
     region_name = Chr + ':' + str(start_ / 1000000) + '-' + str(end_ / 1000000) + ' Mb'
 
-    ax1 = plt.subplot2grid((11, 7), (0, 0), rowspan=6, colspan=6)
+    subfig_r1 = subfig[0]
+    subfig_r2 = subfig[1]
+
+    ax1 = plt.subplot2grid((subfig_r1, subfig_r2+1), (0, 0), rowspan=subfig_r2, colspan=subfig_r2)
     start = int(start_ / resolution)
     end = int(end_ / resolution)
     dense_matrix_part = mat_dense[start:end, start:end]
@@ -1203,10 +1232,11 @@ def draw_map_multi_CI(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi, win
         img = ax1.imshow(dense_matrix_part, cmap='Reds', vmin=np.percentile(dense_matrix_part, h_vmin),
                          vmax=np.percentile(dense_matrix_part, h_vmax))
     # img = ax1.imshow(dense_matrix_part, cmap='coolwarm', vmin = 0, vmax = 0.25)
-    upper = True
-    lower = False
+    upper = TAD_dict['upper']
+    lower = TAD_dict['lower']
     range_t = ed - st - 1
-    tad_color = 'black'
+    tad_color = TAD_dict['color']
+    lw = TAD_dict['linewidth']
     if len(TAD_l) != 0:
         for p in range(len(TAD_l)):
             TAD = TAD_l[p]
@@ -1214,9 +1244,9 @@ def draw_map_multi_CI(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi, win
             ed_tad = TAD[1] - st + 1
             # draw_tad_region(st_tad, ed_tad, TAD_color_1, size_v=5, size_h=5)
             if upper == True:
-                draw_tad_region_upper_half(st_tad, ed_tad, range_t, tad_color, size_v=5, size_h=5)
+                draw_tad_region_upper_half(st_tad, ed_tad, range_t, tad_color, size_v= lw , size_h = lw)
             if lower == True:
-                draw_tad_region_lower_half(st_tad, ed_tad, range_t, tad_color, size_v=5, size_h=5)
+                draw_tad_region_lower_half(st_tad, ed_tad, range_t, tad_color, size_v= lw, size_h = lw)
     ax1.set_xticks([])
     ax1.spines['bottom'].set_linewidth(1.6)
     ax1.spines['left'].set_linewidth(1.6)
@@ -1228,7 +1258,7 @@ def draw_map_multi_CI(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi, win
     plt.yticks(cord_list, y_ticks_l, fontsize=10)
     ax1.set_title(region_name, fontsize=12, pad=15.0)
 
-    cax = plt.subplot2grid((11, 7), (0, 6), rowspan=6, colspan=1)
+    cax = plt.subplot2grid((subfig_r1, subfig_r2+1), (0, subfig_r2), rowspan=6, colspan=1)
     cbaxes = inset_axes(cax, width="30%", height="50%", loc=1)
     plt.colorbar(img, cax=cbaxes, shrink=1, orientation='vertical')
     cax.spines['bottom'].set_linewidth(0)
@@ -1240,41 +1270,51 @@ def draw_map_multi_CI(mat_dense, Chr, st, ed, bin_name_use, df_pvalue_multi, win
     cax.set_xticks([])
     cax.set_yticks([])
 
-    color_l = ['#ED1C24', '#00A2E8', '#3F48CC', '#22B14C', '#FF7F27', '#A349A4', ]
+    if len(color_supply) == 0:
+        color_l = ['#ED1C24', '#00A2E8', '#3F48CC', '#22B14C', '#FF7F27', '#A349A4',
+                   '#ED1C24', '#00A2E8', '#3F48CC', '#22B14C', '#FF7F27', '#A349A4',
+                   '#ED1C24', '#00A2E8', '#3F48CC', '#22B14C', '#FF7F27', '#A349A4',]
+    else:
+        color_l = color_supply
 
     # for i in range(1, len(window_l)+1):
     # wd = window_l[-i]
     for i in range(len(window_l)):
         wd = window_l[i]
-        if score_type == 'attention':
-            color_use = '#22B14C'
-        elif score_type == 'clustering':
-            color_use = '#FF7F27'
-        elif score_type == 'Combine':
-            color_use = '#BFB500'
+        if len(color_supply) == []:
+            color_use = color_l[i]
         else:
-            if color_multi == True:
-                color_use = color_l[i]
+            if score_type == 'attention':
+                color_use = '#22B14C'
+            elif score_type == 'clustering':
+                color_use = '#FF7F27'
+            elif score_type == 'Combine':
+                color_use = '#BFB500'
             else:
-                color_use = '#00A2E8'
+                if color_multi == True:
+                    color_use = color_l[i]
+                else:
+                    color_use = '#00A2E8'
         # ax1_5 = plt.subplot2grid((11, 7), (6 + i - 1, 0), rowspan=1,colspan=6, sharex=ax1)
-        ax1_5 = plt.subplot2grid((11, 7), (6 + i, 0), rowspan=1, colspan=6, sharex=ax1)
+        ax1_5 = plt.subplot2grid((subfig_r1, subfig_r2+1), (subfig_r2 + i, 0), rowspan=1, colspan=subfig_r2, sharex=ax1)
         ax1_5.plot(list(df_pvalue_multi[wd][st:ed]), color='black')
         ax1_5.bar(x_axis_range, list(df_pvalue_multi[wd][st:ed]), label=wd, color=color_use)
-        if len(p_cut) != 0:
-            for p_c in p_cut:
-                ax1_5.hlines(p_c, x_axis_range[0], x_axis_range[-1], color='black', linestyles='--')
+        track_cut_use = track_cut[i]
+        if track_cut_use != '':
+            ax1_5.hlines(track_cut_use, x_axis_range[0], x_axis_range[-1], color='black', linestyles='--')
         ax1_5.spines['bottom'].set_linewidth(1.6)
         ax1_5.spines['left'].set_linewidth(1.6)
         ax1_5.spines['right'].set_linewidth(1.6)
         ax1_5.spines['top'].set_linewidth(1.6)
-        ax1_5.tick_params(axis='y', length=5, width=1.6)
-        ax1_5.tick_params(axis='x', length=5, width=1.6)
+        ax1_5.tick_params(axis='y', length=5, width=1.2)
+        ax1_5.tick_params(axis='x', length=5, width=1.2)
         ax1_5.set_ylabel(wd, fontsize=10)
         ax1_5.set_xticks(cord_list, ['' for k in range(len(cord_list))], fontsize=0, rotation=90)
         # ax1_5.set_yticks([0, 0.5, 1], ['', 0.5, 1], fontsize = 8,)
-        if 'pvalue' in wd:
-            plt.ylim([0, 0.05])
+        if len(track_range) != 0:
+            track_range_use = track_range[i]
+            if len(track_range_use) != 0:
+                plt.ylim([track_range_use[0], track_range_use[-1]])
         if ci_peak_multi != '':
             if wd not in list(ci_peak_multi.keys()):
                 continue
