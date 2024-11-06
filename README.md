@@ -23,12 +23,15 @@ TADGATE can provide good embeddings to represent bins within each TAD.
 </p>
 TADGATE can impute the sparse chromatin contact maps with enhanced topological domains.
 <br>
-<br>
 <p align="center">
 <img src="./TADGATE_imputed.png"  width="45%" height="45%"/>
 </p>
-
-
+TADGATE can impute the single-cell chromatin contact maps and identify TAD-like domains.
+<br>
+<p align="center">
+<img src="./TADGATE_single_cell1.PNG"  width="45%" height="45%"/>
+  <img src="./TADGATE_single_cell2.PNG"  width="45%" height="45%"/>
+</p>
 
 ## Getting start
 
