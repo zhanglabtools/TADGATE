@@ -5,17 +5,18 @@ import torch
 import scipy
 import warnings
 warnings.filterwarnings('ignore')
-#import TADGATE
-#from TADGATE import Call_TADs as CT
-#from TADGATE import TADGATE_main
-#from TADGATE import TADGATE_utils as TL
+import TADGATE
+from TADGATE import Call_TADs as CT
+from TADGATE import TADGATE_main
+from TADGATE import TADGATE_utils as TL
+from TADGATE import Plot_Function as PF
 import argparse
 import sys
-sys.path.append('/home/dcdang/pycharm_workspace/TADGATE/TADGATE_script_new')
-import TADGATE_utils as TL
-import Plot_Function as PF
-import Call_TADs as CT
-import TADGATE_main
+#sys.path.append('/home/dcdang/pycharm_workspace/TADGATE/TADGATE_script_new')
+#import TADGATE_utils as TL
+#import Plot_Function as PF
+#import Call_TADs as CT
+#import TADGATE_main
 
 
 # Function to read parameters from parameters.txt
