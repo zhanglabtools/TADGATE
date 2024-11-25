@@ -42,9 +42,9 @@ cluster_method = K-means
 wd_ci = 5
 wd_p = 3
 dist = 3
-window_range = 500000
+window_range = 5000000
 pvalue_cut = 0.05
-exp_length = 50000
+exp_length = 500000
 length_cut = 3
 filter_method = strict
 
