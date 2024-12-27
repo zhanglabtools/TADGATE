@@ -105,6 +105,5 @@ If you have any issues, please let us know. We have a mailing list located at:
 ### Citation
 
 If TADGATE is used in your research, please cite our paper:
-
-> Uncovering topologically associating domains from three-dimensional genome maps with TADGATE.
-> Dachang Dang, Shao-Wu Zhang, Kangning Dong, Ran Duan, Shihua Zhang
+>Dachang Dang, Shao-Wu Zhang, Kangning Dong, Ran Duan, Shihua Zhang, Uncovering topologically associating domains from three-dimensional genome maps with TADGATE, 
+>Nucleic Acids Research, 2024;, gkae1267, https://doi.org/10.1093/nar/gkae1267
